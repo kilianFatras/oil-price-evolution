@@ -5,21 +5,32 @@ library(forecast)
 library(xts)
 library(dygraphs)
 
-######Importation des données
-setwd(dir = "/Users/Kilian/Programmation/ENSTA_2A/R_project/MAP_STA2/Projet/Valeurs")
-coursPetrole<-read.table("Valeurs.csv", sep = ';', dec = ",", skip = 1)
-head(coursPetrole)
-plot(coursPetrole)
+######Data import
+setwd(dir = "/Users/Kilian/Programmation/ENSTA_2A/R_project/MAP_STA2/Projet/oil-price-evolution/Valeurs")
+oilPriceValue<-read.table("Valeurs.csv", sep = ';', dec = ",", skip = 1)
+head(oilPriceValue)
+plot(oilPriceValue)
 
-######Création Data Frame
-dateFin <- strptime(c("01/01/1990"), "%m/%d/%Y")
-dateIni <- strptime(c("12/01/2016"), "%m/%d/%Y")
-Date <- seq(dateIni, dateFin, by= "-1 month")
-cours<-data.frame(Date,coursPetrole$V3)
-names(cours)<-c("Date","couts")
-plot(cours$Date,cours$couts,type='l')
+######Data Frame
+dateEnd <- strptime(c("01/01/1990"), "%m/%d/%Y")
+dateStart <- strptime(c("12/01/2016"), "%m/%d/%Y")
+Date <- seq(dateStart, dateEnd, by = "-1 month")
+oilPriceDate<-data.frame(Date, oilPriceValue$V3)
+names(oilPriceDate)<-c("Date", "price")
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
 
-######Stats de bases
-mean(cours$couts)
-sd(cours$couts)
-summary(cours$couts)
+######Classe ts
+oilPriceDate.ts <- ts(oilPriceDate$price, start=1, frequency=12) #frequency -> saisonnality time is 1 year
+plot(oilPriceDate.ts)
+
+
+#####Classe zoo
+oilPriceDate.zoo <- zoo(oilPriceDate$price, order.by = oilPriceDate$Date)
+plot(oilPriceDate.zoo)
+
+######Essentials stats
+mean(oilPriceDate$price)
+sd(oilPriceDate$price)
+summary(oilPriceDate$price)
+boxplot(oilPriceDate$price)
+hist(oilPriceDate$price)
