@@ -20,11 +20,11 @@ names(oilPriceDate)<-c("Date", "price")
 plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
 
 ######Classe ts
-oilPriceDate.ts <- ts(oilPriceDate$price, start=1, frequency=12) #frequency -> saisonnality time is 1 year
+oilPriceDate.ts <- ts(oilPriceDate$price, start = 1, frequency = 12) #frequency -> saisonnality time is 1 year
 plot(oilPriceDate.ts)
 
 
-#####Classe zoo
+######Classe zoo
 oilPriceDate.zoo <- zoo(oilPriceDate$price, order.by = oilPriceDate$Date)
 plot(oilPriceDate.zoo)
 
@@ -34,3 +34,53 @@ sd(oilPriceDate$price)
 summary(oilPriceDate$price)
 boxplot(oilPriceDate$price)
 hist(oilPriceDate$price)
+
+######Trend
+#mobile mean
+
+mb<-filter(oilPriceDate$price, filter = array(1/50, dim = 50), method = c("convolution"),
+           sides = 2, circular = FALSE)
+mb<-xts(mb, order.by = oilPriceDate$Date)
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
+lines(mb, col = 'red')
+
+#Differenciation by autocorrelation
+
+oilPriceDate.ts <- ts(oilPriceDate$price, start = 1, frequency = 12) #frequency -> saisonnality time is 1 year
+plot(oilPriceDate.ts)
+Acf(oilPriceDate.ts, na.action = na.omit)
+diff.oilPriceDate.ts <- diff(oilPriceDate.ts, lag = 1, differences = 1) 
+Acf(diff.oilPriceDate.ts, na.action = na.omit)
+plot(oilPriceDate.ts)
+plot(diff.oilPriceDate.ts)
+
+#parametrique trend
+
+time <- c(1:nrow(oilPriceDate))
+oilPriceDate$time <- time
+reg <- lm(price ~ time + I(time^2) + I(time^3) + I(time^4), data = oilPriceDate) 
+summary(reg)
+par(mfrow = c(1, 2))
+plot(oilPriceDate$Date, oilPriceDate$price, type = "l", xlab = "months",
+     ylab = "Ind. Price .Oil .In .London (INSEE)", col = "blue")
+lines(oilPriceDate$Date, reg$fitted, col = "red", lwd = 2)
+plot(oilPriceDate$Date, oilPriceDate$price - reg$fitted, type = "l",
+     xlab = "months", ylab = "Ind. Prix. - detrend", col = "orangered2")
+####Courbe rouge - courbe bleu
+
+#Kernel estimation
+
+noyau <- ksmooth(oilPriceDate$time, oilPriceDate$price, kernel = c("normal"), bandwidth = 10)
+par(mfrow = c(1, 2))
+plot(oilPriceDate$Date, oilPriceDate$price, type = "l", xlab = "",
+     ylab = "Ind. Price. Brent. London (INSEE)", col = "blue")
+lines(oilPriceDate$Date, noyau$y, col = "red", lwd = 2)
+plot(oilPriceDate$Date, oilPriceDate$price - noyau$y, type = "l",
+     xlab = "", ylab = "Ind. Prix. - detrend", col = "orangered2")
+
+#local Polynomial estimation
+
+lo <- loess(price ~ time, data = oilPriceDate, degree = 2, span = 0.7)
+plot(oilPriceDate$Date, oilPriceDate$price, type = "l", xlab = "",
+     ylab = "Ind. Price. Brent. London (INSEE)", col = "blue")
+lines(oilPriceDate$Date, lo$fitted, col = "orangered2", lwd = 2)
