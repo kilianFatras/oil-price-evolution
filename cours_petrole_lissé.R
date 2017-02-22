@@ -19,15 +19,6 @@ oilPriceDate<-data.frame(Date, oilPriceValue$V3)
 names(oilPriceDate)<-c("Date", "price")
 plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
 
-######Classe ts
-oilPriceDate.ts <- ts(oilPriceDate$price, start = 1, frequency = 12) #frequency -> saisonnality time is 1 year
-plot(oilPriceDate.ts)
-
-
-######Classe zoo
-oilPriceDate.zoo <- zoo(oilPriceDate$price, order.by = oilPriceDate$Date)
-plot(oilPriceDate.zoo)
-
 ######Smooth data and avoid choc
 
 j = 0
@@ -37,6 +28,15 @@ for (i in 118:92) {
 }
 
 plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
+
+######Classe ts
+oilPriceDate.ts <- ts(oilPriceDate$price, start = 1, frequency = 12) #frequency -> saisonnality time is 1 year
+plot(oilPriceDate.ts)
+
+
+######Classe zoo
+oilPriceDate.zoo <- zoo(oilPriceDate$price, order.by = oilPriceDate$Date)
+plot(oilPriceDate.zoo)
 
 
 ######Essentials stats
