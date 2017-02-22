@@ -28,6 +28,17 @@ plot(oilPriceDate.ts)
 oilPriceDate.zoo <- zoo(oilPriceDate$price, order.by = oilPriceDate$Date)
 plot(oilPriceDate.zoo)
 
+######Smooth data and avoid choc
+
+j = 0
+for (i in 118:92) {
+  oilPriceDate$price[i] = (oilPriceDate$price[91] - oilPriceDate$price[117])/27 * j + oilPriceDate$price[117]
+  j = j + 1
+}
+
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
+
+
 ######Essentials stats
 mean(oilPriceDate$price)
 sd(oilPriceDate$price)
@@ -98,7 +109,7 @@ lines(oilPriceDate$Date, loc3$fitted, col='green', lwd=2)
 MA<-filter(oilPriceDate$price, filter = array(1/(27), dim = 27), method = c("convolution"),
            sides = 2, circular = FALSE)
 MA2<-filter(oilPriceDate$price, filter = array(1/(27*6), dim = 27*6), method = c("convolution"),
-           sides = 2, circular = FALSE)
+            sides = 2, circular = FALSE)
 ##suite aux schémas, on observe une saisonnalité sur 6 ans 
 
 plot(oilPriceDate$Date, oilPriceDate$price - loc2$fitted, type = 'l')
@@ -110,5 +121,4 @@ lines(oilPriceDate$Date,MA2 - loc2$fitted, col = 'orange')
 par(mfrow = c(1, 2))
 acf(oilPriceDate.ts)
 acf(diff(oilPriceDate.ts, lag = 5, differences = 1))
-
 
