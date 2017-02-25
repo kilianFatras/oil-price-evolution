@@ -4,7 +4,7 @@ library(timeDate)
 library(forecast)
 library(xts)
 library(dygraphs)
-
+library(mgcv)
 ######Data import
 setwd(dir = "/Users/Kilian/Programmation/ENSTA_2A/R_project/MAP_STA2/Projet/oil-price-evolution/Valeurs")
 oilPriceValue<-read.table("Valeurs.csv", sep = ';', dec = ",", skip = 1)
@@ -19,8 +19,20 @@ oilPriceDate<-data.frame(Date, oilPriceValue$V3)
 names(oilPriceDate)<-c("Date", "price")
 plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
 
+
+######Smooth data and avoid choc
+
+j = 0
+for (i in 118:92) {
+  oilPriceDate$price[i] = (oilPriceDate$price[91] - oilPriceDate$price[117])/27 * j + oilPriceDate$price[117]
+  j = j + 1
+}
+
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l', main = "évolution du prix du baril de pétrole lissé linéairement", xlab = "Date", ylab = "Prix du baril")
+
 ######Classe ts
-oilTs = oilPriceDate$price[324:1]
+oilTs = oilPriceDate$price[324:35]
+oilTime = oilPriceDate$Date[324:35] 
 oilPriceDate.ts <- ts(oilTs, start = 1, frequency = 27) #frequency -> saisonnality time is 1 year
 plot(oilPriceDate.ts)
 
@@ -29,14 +41,13 @@ plot(oilPriceDate.ts)
 oilPriceDate.zoo <- zoo(oilPriceDate$price, order.by = oilPriceDate$Date)
 plot(oilPriceDate.zoo)
 
+
 ######Essentials stats
 mean(oilPriceDate$price)
 sd(oilPriceDate$price)
 summary(oilPriceDate$price)
-#par(mfrow = c(1, 2))
-boxplot(oilPriceDate$price, main = "boîte à moustache")
-hist(oilPriceDate$price, main = "histogramme des prix", xlab = "Prix")
-
+boxplot(oilPriceDate$price)
+hist(oilPriceDate$price)
 
 ######Trend
 #mobile mean
@@ -44,7 +55,7 @@ hist(oilPriceDate$price, main = "histogramme des prix", xlab = "Prix")
 mb<-filter(oilPriceDate$price, filter = array(1/50, dim = 50), method = c("convolution"),
            sides = 2, circular = FALSE)
 mb<-xts(mb, order.by = oilPriceDate$Date)
-plot(oilPriceDate$Date, oilPriceDate$price, type = 'l', main = "Moyenne mobile données brutes", xlab = "Date", ylab = "Prix du baril")
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l', main = "Moyenne mobile données lissées", xlab = "Date", ylab = "Prix du baril")
 lines(mb, col = 'red')
 
 #Differenciation by autocorrelation
@@ -53,7 +64,7 @@ Acf(oilPriceDate.ts, na.action = na.omit)
 diff.oilPriceDate.ts <- diff(oilPriceDate.ts, lag = 1, differences = 1) 
 Acf(diff.oilPriceDate.ts, na.action = na.omit)
 plot(oilPriceDate.ts)
-plot(diff.oilPriceDate.ts, main = "évolution du prix du baril de pétrole lissé brutes", xlab = "Date", ylab = "Prix du baril")
+plot(diff.oilPriceDate.ts, main = "évolution du prix du baril de pétrole lissé linéairement", xlab = "Date", ylab = "Prix du baril")
 
 #parametrique trend
 
@@ -85,11 +96,10 @@ graphics.off()
 loc<-loess (price ~ time, dat=oilPriceDate, degree=2, span=0.5) #span sur le pourcentages de valeurs prises dans la fenêtre
 loc2<-loess (price ~ time, dat=oilPriceDate, degree=2, span=0.2)
 loc3<-loess (price ~ time, dat=oilPriceDate, degree=1, span=0.2)
-plot(oilPriceDate$Date,oilPriceDate$price, type='l', main = "tendance par polynômes locaux des données brutes", xlab="months", ylab="Oil barril price(INSEE)", col= "blue")
+plot(oilPriceDate$Date,oilPriceDate$price, type='l', main = "tendance par polynômes locaux", xlab="months", ylab="Oil barril price(INSEE)", col= "blue")
 lines(oilPriceDate$Date, loc$fitted, col='red', lwd=2)
 lines(oilPriceDate$Date, loc2$fitted, col='orange', lwd=2)
 lines(oilPriceDate$Date, loc3$fitted, col='green', lwd=2)
-
 
 #semi parametrique estimation trend
 n <- 100
@@ -114,7 +124,7 @@ plot(oilPriceDate$Date, oilPriceDate$price, type = "l", xlab = "",
 lines(oilPriceDate$Date, g$fitted, col = "red", lwd = 2)
 
 
-#################Seasonality per year
+
 
 #mobile mean 
 ##saionality 1 year
@@ -131,7 +141,6 @@ plot(oilPriceDate$Date, oilPriceDate$price - loc2$fitted, type = 'l',main = "Sai
 lines(oilPriceDate$Date,MA , col = 'blue')
 lines(oilPriceDate$Date,MA2, col = 'orange')
 lines(oilPriceDate$Date,MA3, col = 'red')
-
 
 ######differenciation
 par(mfrow = c(1, 2))
@@ -321,3 +330,15 @@ X1.SeasonalAdditifDoubleExpSmooth=SeasonalAdditifDoubleExpSmooth(X1, 0.2, 0.2, 0
 plot(X1,type='l',ylim=range(X1,X1.SeasonalAdditifDoubleExpSmooth$smooth))
 lines(X1.SeasonalAdditifDoubleExpSmooth$smooth, col='red')
 #Visiblement légèrement mieux.. 
+
+
+####prevision on the sample
+
+oilPriceDate.ts.HoltWintersFunction = HoltWinters(oilPriceDate.ts, alpha = NULL, beta = NULL, gamma = NULL,
+                                     seasonal = c("additive"),
+                                     start.periods = 2, l.start = NULL, b.start = NULL,
+                                     s.start = NULL,
+                                     optim.start = c(alpha = 0.3, beta = 0.1, gamma = 0.1),
+                                     optim.control = list())
+plot(fitted(oilPriceDate.ts.HoltWintersFunction))
+plot(oilPriceDate.ts.HoltWintersFunction)

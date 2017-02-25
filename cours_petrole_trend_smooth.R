@@ -19,6 +19,23 @@ oilPriceDate<-data.frame(Date, oilPriceValue$V3)
 names(oilPriceDate)<-c("Date", "price")
 plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
 
+#mobile mean and smooth
+
+mb<-filter(oilPriceDate$price, filter = array(1/50, dim = 50), method = c("convolution"),
+           sides = 2, circular = FALSE)
+mb<-xts(mb, order.by = oilPriceDate$Date)
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l')
+lines(mb, col = 'red')
+
+######Smooth data with mobile mean and avoid choc
+
+for (i in 118:92) {
+  oilPriceDate$price[i] = mb[324 + 1 - i]
+}
+
+plot(oilPriceDate$Date, oilPriceDate$price, type = 'l', main = "évolution du prix du baril de pétrole lissé linéairement", xlab = "Date", ylab = "Prix du baril")
+
+
 ######Classe ts
 oilTs = oilPriceDate$price[324:1]
 oilPriceDate.ts <- ts(oilTs, start = 1, frequency = 27) #frequency -> saisonnality time is 1 year
@@ -33,19 +50,12 @@ plot(oilPriceDate.zoo)
 mean(oilPriceDate$price)
 sd(oilPriceDate$price)
 summary(oilPriceDate$price)
-#par(mfrow = c(1, 2))
-boxplot(oilPriceDate$price, main = "boîte à moustache")
-hist(oilPriceDate$price, main = "histogramme des prix", xlab = "Prix")
-
+boxplot(oilPriceDate$price)
+hist(oilPriceDate$price)
 
 ######Trend
-#mobile mean
 
-mb<-filter(oilPriceDate$price, filter = array(1/50, dim = 50), method = c("convolution"),
-           sides = 2, circular = FALSE)
-mb<-xts(mb, order.by = oilPriceDate$Date)
-plot(oilPriceDate$Date, oilPriceDate$price, type = 'l', main = "Moyenne mobile données brutes", xlab = "Date", ylab = "Prix du baril")
-lines(mb, col = 'red')
+
 
 #Differenciation by autocorrelation
 par(mfrow = c(1, 2))
@@ -53,7 +63,7 @@ Acf(oilPriceDate.ts, na.action = na.omit)
 diff.oilPriceDate.ts <- diff(oilPriceDate.ts, lag = 1, differences = 1) 
 Acf(diff.oilPriceDate.ts, na.action = na.omit)
 plot(oilPriceDate.ts)
-plot(diff.oilPriceDate.ts, main = "évolution du prix du baril de pétrole lissé brutes", xlab = "Date", ylab = "Prix du baril")
+plot(diff.oilPriceDate.ts)
 
 #parametrique trend
 
@@ -85,33 +95,10 @@ graphics.off()
 loc<-loess (price ~ time, dat=oilPriceDate, degree=2, span=0.5) #span sur le pourcentages de valeurs prises dans la fenêtre
 loc2<-loess (price ~ time, dat=oilPriceDate, degree=2, span=0.2)
 loc3<-loess (price ~ time, dat=oilPriceDate, degree=1, span=0.2)
-plot(oilPriceDate$Date,oilPriceDate$price, type='l', main = "tendance par polynômes locaux des données brutes", xlab="months", ylab="Oil barril price(INSEE)", col= "blue")
+plot(oilPriceDate$Date,oilPriceDate$price, type='l',xlab="months", ylab="Oil barril price(INSEE)", col= "blue")
 lines(oilPriceDate$Date, loc$fitted, col='red', lwd=2)
 lines(oilPriceDate$Date, loc2$fitted, col='orange', lwd=2)
 lines(oilPriceDate$Date, loc3$fitted, col='green', lwd=2)
-
-
-#semi parametrique estimation trend
-n <- 100
-const <- rep(1, n)
-f1 <- function(x) 1
-f2 <- function(x) x 
-f3 <- function(x) x^2 
-f4 <- function(x) x^3
-x <- seq(0, 1, length = n)
-design <- as.matrix(data.frame(const = const, f1 = f1(x), f2 = f2(x),
-                               f3 = f3(x), f4 = f4(x)))
-matplot(x, y = design, type = "l", lty = 1, ylab = "", main = "truncated power functions q = 1")
-set.seed(150)
-coef <- runif(5, -1, 1)
-f <- design %*% coef
-plot(x, f, type = "l", col = "purple", lwd = 2) 
-
-g <- gam(oilPriceDate$price ~ s(time, k = 10), data = oilPriceDate) 
-plot(oilPriceDate$Date, oilPriceDate$price, type = "l", xlab = "",
-     ylab = "Ind. Prix. Baril Petrole (INSEE)", col = "blue",
-     lwd = 2)
-lines(oilPriceDate$Date, g$fitted, col = "red", lwd = 2)
 
 
 #################Seasonality per year
@@ -282,10 +269,15 @@ SeasonalMultiplicatifDoubleExpSmooth=function(x,alpha,beta,delta,T)
 
 h<-1
 T<-12
-X1.SeasonalMultiplicatifDoubleExpSmooth=SeasonalMultiplicatifDoubleExpSmooth(X1, 0.2, 0.2, 0.2, 12)
+X1.SeasonalMultiplicatifDoubleExpSmooth=SeasonalMultiplicatifDoubleExpSmooth(X1, 0.2, 0.2, 0.2, 72)
 plot(X1,type='l',ylim=range(X1,X1.SeasonalMultiplicatifDoubleExpSmooth$smooth))
 lines(X1.SeasonalMultiplicatifDoubleExpSmooth$smooth, col='red')
+#Terrrrible!
 
+X2.SeasonalMultiplicatifDoubleExpSmooth=SeasonalMultiplicatifDoubleExpSmooth(X1, 0.2, 0.2, 0.2, 12)
+plot(X1,type='l',ylim=range(X1,X2.SeasonalMultiplicatifDoubleExpSmooth$smooth))
+lines(X2.SeasonalMultiplicatifDoubleExpSmooth$smooth, col='red')
+#Et visiblement pas mieux en prenant la période plus importante!
 
 X2.SeasonalMultiplicatifDoubleExpSmooth=SeasonalMultiplicatifDoubleExpSmooth(X1, 0.9, 0.1, 0.1, 12)
 plot(X1,type='l',ylim=range(X1,X2.SeasonalMultiplicatifDoubleExpSmooth$smooth))
