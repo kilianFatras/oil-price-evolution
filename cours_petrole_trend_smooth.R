@@ -38,7 +38,7 @@ plot(oilPriceDate$Date, oilPriceDate$price, type = 'l', main = "évolution du pr
 
 ######Classe ts
 oilTs = oilPriceDate$price[324:1]
-oilPriceDate.ts <- ts(oilTs, start = 1, frequency = 27) #frequency -> saisonnality time is 1 year
+oilPriceDate.ts <- ts(oilTs, start = 1, frequency = 12) #frequency -> saisonnality time is 1 year
 plot(oilPriceDate.ts)
 
 
@@ -105,25 +105,23 @@ lines(oilPriceDate$Date, loc3$fitted, col='green', lwd=2)
 
 #mobile mean 
 ##saionality 1 year
-MA<-filter(oilPriceDate$price - loc2$fitted, filter = array(1/(12), dim = 12), method = c("convolution"),
+
+seasonPart = oilPriceDate$price - loc2$fitted 
+#la partie saisonnière est la série à laquelle on enlève sa tendance
+MA<-filter(seasonPart, filter = array(1/(12), dim = 12), method = c("convolution"),
            sides = 2, circular = FALSE)
-MA2<-filter(oilPriceDate$price - loc2$fitted, filter = array(1/(12*2), dim = 12*2), method = c("convolution"),
+MA2<-filter(seasonPart, filter = array(1/(12*2), dim = 12*2), method = c("convolution"),
             sides = 2, circular = FALSE)
-MA3<-filter(oilPriceDate$price - loc2$fitted, filter = array(1/(12*2*5), dim = 12*2*5), method = c("convolution"),
+MA3<-filter(seasonPart, filter = array(1/(12*2*5), dim = 12*2*5), method = c("convolution"),
             sides = 2, circular = FALSE)
 
 ##second saisonality 6 year 
 
-plot(oilPriceDate$Date, oilPriceDate$price - loc2$fitted, type = 'l',main = "Saisonnalité des données lissées linéairement", xlab = "Date", ylab = "Prix du baril")
-lines(oilPriceDate$Date,MA , col = 'blue')
-lines(oilPriceDate$Date,MA2, col = 'orange')
-lines(oilPriceDate$Date,MA3, col = 'red')
+plot(oilPriceDate$Date, seasonPart, type = 'l',main = "Saisonnalité des données lissées linéairement", xlab = "Date", ylab = "Prix du baril")
+lines(oilPriceDate$Date, MA, col = 'blue')
+lines(oilPriceDate$Date, MA2, col = 'orange')
+lines(oilPriceDate$Date, MA3, col = 'red')
 
-
-######differenciation
-par(mfrow = c(1, 2))
-acf(oilPriceDate.ts)
-acf(diff(oilPriceDate.ts, lag = 5, differences = 1))
 
 
 
@@ -313,3 +311,18 @@ X1.SeasonalAdditifDoubleExpSmooth=SeasonalAdditifDoubleExpSmooth(X1, 0.2, 0.2, 0
 plot(X1,type='l',ylim=range(X1,X1.SeasonalAdditifDoubleExpSmooth$smooth))
 lines(X1.SeasonalAdditifDoubleExpSmooth$smooth, col='red')
 #Visiblement légèrement mieux.. 
+
+
+####prevision on the sample
+
+oilPriceDate.ts.HoltWintersFunction = HoltWinters(oilPriceDate.ts, alpha = NULL, beta = NULL, gamma = NULL,
+                                                  seasonal = c("additive"),
+                                                  start.periods = 2, l.start = NULL, b.start = NULL,
+                                                  s.start = NULL,
+                                                  optim.start = c(alpha = 0.3, beta = 0.1, gamma = 0.1),
+                                                  optim.control = list())
+plot(fitted(oilPriceDate.ts.HoltWintersFunction))
+plot(oilPriceDate.ts.HoltWintersFunction)
+
+p <- predict(oilPriceDate.ts.HoltWintersFunction, n.ahead=35)
+lines(p, col="blue")
